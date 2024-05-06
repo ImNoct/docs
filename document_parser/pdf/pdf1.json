@@ -1,0 +1,22 @@
+{
+    "C1005C0G1H102J050BA Kemet": "C",
+    "C0510X5R1C104M030AC TDK": "C",
+    "C2012X5R1C226M125AC TDK": "C",
+    "C1005X5R1C105K050BC TDK": "C",
+    "C2012X5R1A476M125AC TDK": "C",
+    "C0402C101J5GAC Kemet": "C",
+    "C1005X5R1C224K050BB TDK": "C",
+    "LTC6400IUD-8#PBF Linear Technology": "DA",
+    "TPS7A4700RGW Texas Instruments": "DA",
+    "ADS54RF63IPFPR Texas Instruments": "DA",
+    "Катушка индуктивности 0302CS-34NXGL Coilcraft": "L",
+    "Р1-12-0,062-1,5 кОм±5%-М-\"A\"": "R",
+    "Р1-12-0,062-1 кОм±5%-М-\"A\"": "R",
+    "R4 Р1-12-0,1-10 Ом±1%-Т-\"A\"": "R",
+    "Р1-12-0,062-130 Ом±5%-М-\"A\"": "R",
+    "Р1-12-0,062-82 Ом±5%-Т-\"A\"": "R",
+    "R10 Р1-12-0,062-49,9 Ом±1%-М-\"A\"": "R",
+    "Вилка M50-3502542 Harwin": "XP",
+    "Z2 Фильтр LFCN-120 Mini-Circuits": "Z",
+    "Z4 Фильтр SBSPP0250154MX Syfer": "Z"
+}

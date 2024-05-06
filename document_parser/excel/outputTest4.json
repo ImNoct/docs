@@ -1,0 +1,17 @@
+{
+    "0603-X5R-1 мкФ±10 %-50 В (GRM188R61H105KAAL)": "C",
+    "NCV317BD2TG ON Semiconductor": "DA",
+    "CD4044BDW TexasInstruments": "DD",
+    "CD4068BM TexasInstruments": "DD",
+    "0603-3 кОм±5 % (CR0603-JW-302ELF) Bourns": "R",
+    "0603-0 Ом±5 % (CR0603-J/-000ELF) Bourns": "R",
+    "0603-2,2 кОм±5 % (CR0603-JW-222ELF) Bourns": "R",
+    "0603-47 кОм±5 % (CR0603-JW-473ELF) Bourns": "R",
+    "0603-30 кОм±5 % (CR0603-JW-303ELF) Bourns": "R",
+    "0603-10 кОм±5 % (CR0603-JW-103ELF) Bourns": "R",
+    "2512-2 Ом±1 % (RC2512JK-072RL) Yageo": "R",
+    "КT220A9 АДБК.432150.901ТУ Интеграл": "VT",
+    "2ПЕ211В91 АЕЯР.432140.748ТУ АО \"Ангстрем\"": "VT",
+    "Вилка M80-8820242 Harwin": "XP",
+    "Вилка M80-8530442 Harwin": "XP"
+}

@@ -1,0 +1,21 @@
+{
+    "T495E107M025ATE100 Kemet": "C",
+    "C1608X5R1E105K080AC TDK": "C",
+    "C2012X5R1C226M125AC TDK": "C",
+    "C1005X5R1C105K050BC TDK": "C",
+    "C2012X5R1A476M125AC TDK": "C",
+    "C0510X5R1C104M030AC TDK": "C",
+    "C1005X5R1C224K050BB TDK": "C",
+    "PTH08080WAH Texas Instruments": "DA",
+    "TPS7A4700RGW Texas Instruments": "DA",
+    "SN65LVDT390PW Texas Instruments": "DD",
+    "SN65LVDS391PW Texas Instruments": "DD",
+    "XC2C256-7VQ100I Xilinx": "DD",
+    "SN74ABT162244DL Texas Instruments": "DD",
+    "Р1-12-0,1-357 Ом±1%-М-\"A\"": "R",
+    "Р1-12-0,062-1 кОм±5%-М-\"A\"": "R",
+    "Светодиод KPT-1608SGC Kingbright": "VD",
+    "Вилка СНП377-14ВП21-2-03-4.0 РЮМК.430420.017 ТУ": "XP",
+    "XP3 Вилка DRB-37M": "XP",
+    "Розетка СНП260-135РП32 БСАР.434410.003 ТУ": "XS"
+}
