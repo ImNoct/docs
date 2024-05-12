@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Component Reliability</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f0f0f0;
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+            padding: 20px 0;
+        }
+
+        #component-form {
+            width: 300px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 5px;
+        }
+
+        #component-form label,
+        #component-form input {
+            display: block;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        #component-form input[type="submit"] {
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+        }
+
+        #component-form input[type="submit"]:hover {
+            background-color: #45a049;
+        }
+
+        #result {
+            width: 300px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+<h1>Component Reliability</h1>
+<form id="component-form" enctype="multipart/form-data">
+    <label for="component_name">Component Name:</label><br>
+    <input type="text" id="component_name" name="component_name"><br>
+    <label for="file">Or upload an Excel or PDF file:</label><br>
+    <input type="file" id="file" name="file" accept=".xls,.pdf"><br>
+    <input type="submit" value="Submit">
+</form>
+<p id="result"></p>
+
+<script>
+    $(document).ready(function () {
+        $('#component-form').on('submit', function (e) {
+            e.preventDefault();
+            var component_name = $('#component_name').val();
+            var file = document.getElementById('file').files[0];
+
+            if (component_name.trim() !== '') {
+                $.get('/get_value', { component_name: component_name }, function (data) {
+                    $('#result').html(JSON.stringify(data));
+                });
+            } else if (file) {
+                var formData = new FormData();
+                formData.append('file', file);
+                
+                $.ajax({
+                    url: '/get_from_file',
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function(data) {
+                        $('#result').html(JSON.stringify(data));
+                    },
+                });
+            }
+        });
+    });
+</script>
+</body>
+</html>
