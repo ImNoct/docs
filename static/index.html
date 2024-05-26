@@ -1,66 +1,129 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <title>Component Reliability</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/json2html/2.2.3/json2html.min.js"></script>
     <style>
         body {
-            font-family: Arial, sans-serif;
+            background-color: #353535;
             margin: 0;
             padding: 0;
-            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+            display: flex;
+            height: 100vh;
         }
-
-        h1 {
-            color: #333;
-            text-align: center;
-            padding: 20px 0;
-        }
-
-        #component-form {
-            width: 300px;
-            margin: 0 auto;
+        .left-panel, .right-panel {
             padding: 20px;
-            background-color: #fff;
-            border-radius: 5px;
+            box-sizing: border-box;
+            /* border: 2px solid #ccc; */
+            border-radius: 8px;
+            margin: 10px;
+            /* background-image: url('back.png');
+            background-size: cover;
+            background-position: center; */
+        }
+        .left-panel {
+            background-color: #f0f0f0;
+            width: 20%;
+        }
+        .right-panel {
+            background-color: #f0f0f0;
+            flex: 1;
+            
+        }
+        input[type="text"], input[type="file"], button {
+            display: block;
+            /* margin-bottom: 10px; */
+            padding: 8px;
+            width: 100%;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        h2 {
+            text-align: center;
+            margin-top: 0;
         }
 
         #component-form label,
         #component-form input {
             display: block;
             width: 100%;
-            margin-bottom: 10px;
+            /* margin-bottom: 5px; */
         }
 
         #component-form input[type="submit"] {
             background-color: #4CAF50;
             color: white;
+            border: none;
             cursor: pointer;
         }
 
-        #component-form input[type="submit"]:hover {
-            background-color: #45a049;
+        table {
+            font-size: 15px;
+            width: 100%;
+            border: 1px solid black;
+            border-collapse: collapse;
         }
 
-        #result {
+        .div_before_table {
+            overflow:hidden;
+            overflow-y: scroll;
+            height: 830px;
+        }
+
+        th {
+            background-color: #a1d1a3;
+        }
+
+        tr:nth-child(even) {
+            background-color: #a1d1a3;
+        }
+
+        /* #result {
             width: 300px;
             margin: 20px auto;
             padding: 20px;
             background-color: #fff;
             border-radius: 5px;
-        }
+        } */
     </style>
 </head>
 <body>
-<h1>Component Reliability</h1>
-<form id="component-form" enctype="multipart/form-data">
-    <label for="component_name">Component Name:</label><br>
-    <input type="text" id="component_name" name="component_name"><br>
-    <label for="file">Or upload an Excel or PDF file:</label><br>
-    <input type="file" id="file" name="file" accept=".xls,.pdf"><br>
-    <input type="submit" value="Submit">
-</form>
-<p id="result"></p>
+    <div class="left-panel">
+        <h2>Входные данные</h2>
+        <form id="component-form" enctype="multipart/form-data">
+            <label for="component_name">Компонент:</label><br>
+            <input type="text" id="component_name" name="component_name"><br>
+            <label for="file">Загрузить excel или pdf файл:</label><br>
+            <input type="file" id="file" name="file" accept=".xls,.pdf"><br>
+            <!-- <input type="submit" value="Submit"> -->
+            <button type="submit" value="Submit">Загрузить</button>
+        </form>
+    </div>
+    <div class="right-panel">
+        <h2>Показатели надежности</h2>
+        <p id="result"></p>
+        <div class="div_before_table">
+        <table id="table">
+            <tr><th>номер</th><th>группа</th><th>λб.с.г·10^6, 1/ч </th></tr>
+            <tbody id="tbody"></tbody>
+        </table>
+        </div>
+    </div>
 
 <script>
     $(document).ready(function () {
@@ -69,9 +132,16 @@
             var component_name = $('#component_name').val();
             var file = document.getElementById('file').files[0];
 
+            var transform = {"tag":"tr","children":[
+                        {"tag":"td","html":"${component_name}"},
+                        {"tag":"td","html":"${component_group}"},
+                        {"tag":"td","html":"${reliability}"}
+                    ]};
+
             if (component_name.trim() !== '') {
                 $.get('/get_value', { component_name: component_name }, function (data) {
-                    $('#result').html(JSON.stringify(data));
+                    // $('#result').html(JSON.stringify(data));
+                    $('#tbody').html(json2html.transform(data,transform));
                 });
             } else if (file) {
                 var formData = new FormData();
@@ -84,7 +154,8 @@
                     processData: false,
                     contentType: false,
                     success: function(data) {
-                        $('#result').html(JSON.stringify(data));
+                        // $('#result').html(JSON.stringify(data));
+                        $('#tbody').html(json2html.transform(data,transform));
                     },
                 });
             }

@@ -1,25 +1,33 @@
-from flask import Flask, request, jsonify, flash, redirect, url_for
+from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from transformers import pipeline
 import os
 import requests
 import numpy as np
+import pandas as pd
 from flask import send_from_directory
-from werkzeug.utils import secure_filename
+import json
+
 from document_parser.excel_parser import ExcelParser
 from document_parser.pdf_parser import PDFParser
+from cache.cache import Cache
+from search import google, efind
 
+# import random
+# import time
 
 # Configuration
 db = SQLAlchemy()
 app = Flask(__name__)
-UPLOAD_FOLDER = './uploads'
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
 efind_token = os.getenv('EFIND_TOKEN')
 
+UPLOAD_FOLDER = './uploads'
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
+
+description_cache = Cache()
 
 db.init_app(app)
 
@@ -27,27 +35,86 @@ db.init_app(app)
 classifier = pipeline("zero-shot-classification", model="facebook/bart-large-mnli")
 
 
-# Database model
-class Component(db.Model):
-    __tablename__ = 'components_characteristics'
-    group_name = db.Column(db.String, primary_key=True)
-    reliability = db.Column(db.Float)
+class DimGroup(db.Model):
+    __tablename__ = 'dim_group'
+
+    group_id = db.Column(db.Integer, primary_key=True)
+    group_name = db.Column(db.String())
+
+
+    @staticmethod
+    def get_group(group_id: int):
+        row = DimGroup.query.filter_by(group_id=group_id).first()
+        if row:
+            return row.group_name
+
+    @staticmethod
+    def get_group_id(group_name):
+        row = DimGroup.query.filter_by(group_name=group_name).first()
+        if row:
+            return row.group_id
 
     @staticmethod
     def get_all_groups():
-        return [x.group_name for x in Component.query.all()]
+        rows = DimGroup.query.all()
+        return [row.group_id for row in rows]
+
+
+class ComponentReliability(db.Model):
+    __tablename__ = 'component_reliability'
+
+    group_id = db.Column(db.Integer, db.ForeignKey('dim_group.group_id'), primary_key=True)
+    reliability = db.Column(db.Float, nullable=False)
+
 
     @staticmethod
     def get_reliability_value(group_name):
-        component = Component.query.filter_by(group_name=group_name).first()
-        if component:
-            return {"component_group": group_name,
-                    "probability": component.reliability,
-                    # "all groups": Component.get_all_groups()
-                    }
-        else:
-            return {"error": "Component not found"}
+        group_id = DimGroup.get_group_id(group_name)
+        component = ComponentReliability.query.filter_by(group_id=group_id).first()
 
+        if component:
+            return {
+                "component_group": group_name,
+                "reliability": component.reliability,
+            }
+        else:
+            return {}
+
+
+class DimComponent(db.Model):
+    __tablename__ = 'dim_component'
+
+    component_name = db.Column(db.String(), primary_key=True)
+    group_id = db.Column(db.Integer, db.ForeignKey('dim_group.group_id'))
+
+
+    @staticmethod
+    def get_group(component_name):
+        # row = DimComponent.query.filter_by(component_name=component_name).first()
+        row = DimComponent.query.filter(DimComponent.component_name.contains(component_name)).first()
+        if row:
+            return row.group_id
+
+
+class ClassComponent(db.Model):
+    __tablename__ = 'class_component'
+
+    class_name = db.Column(db.String(), primary_key=True)
+    group_id = db.Column(db.Integer, db.ForeignKey('dim_group.group_id'))
+
+
+    @staticmethod
+    def get_all_groups(class_name):
+        rows = ClassComponent.query.filter_by(class_name=class_name).all()
+        return [row.group_id for row in rows]
+
+
+def get_group_names(class_name):
+    if class_name:
+        rows = ClassComponent.get_all_groups(class_name)
+        return [DimGroup.get_group(row) for row in rows]
+    else:
+        return DimGroup.get_all_groups()
 
 # API response helper
 def api_response(res, status_code=200):
@@ -55,95 +122,140 @@ def api_response(res, status_code=200):
 
 
 def get_component_desc(component_name):
-    # Define the API endpoint
-    endpoint = f"https://efind.ru/api/search/{component_name}"
+    desc, found = description_cache.get(component_name)
+    if found:
+        return desc
+    
+    component_desc = google.get_description(component_name)
 
-    # Define the query parameters
-    params = {
-        "access_token": efind_token,
-        # "stock": 1,
-        # "hp": 1,
-        # "cur": "rur",
-    }
+    # component_desc = efind.get_description(component_name, efind_token)
 
-    def get_most_informative_note(response):
-        max_length = 0
-        most_informative_note = ""
+    # if not component_desc:
+    #     component_desc = google.get_description(component_name)
 
-        for item in response:
-            for row in item["rows"]:
-                note = row.get("note", "")
-                if len(note) > max_length:
-                    max_length = len(note)
-                    most_informative_note = note
-
-        return most_informative_note
-
-    # Send a GET request to the API endpoint
-    response = requests.get(endpoint, params=params)
-
-    # Check if the request was successful
-    if response.status_code == 200:
-        # Parse the JSON response
-        data = response.json()
-
-        # Extract the component_desc from the data
-        if len(data) != 0:
-            component_desc = get_most_informative_note(data)
-        else:
-            print(f"Error: Cant find component {component_name} in the database")
-            return None
-
-        return component_desc
-
-    else:
-        print(f"Error: Received status code {response.status_code}")
+    if not component_desc:
         return None
 
+    description_cache.set(component_name, component_desc)
+    return component_desc
 
-def get_reliability_by_name(component_name):
+
+def search_db(component_name):
+    print("SEARCHING DB:", component_name)
+    # Try to find const group name
+    component_group_id = DimComponent.get_group(component_name)
+    component_group = DimGroup.get_group(component_group_id)
+
+    if not component_group_id:
+        print("NOT FOUND DB")
+        return None
+    
+    print("COMPONENT GROUP:", component_group)
+    res = ComponentReliability.get_reliability_value(component_group)
+    if res:
+        res["component_name"] = component_name
+        return res
+    
+    print("NOT FOUND DB")
+    return None
+
+def get_reliability_by_name(component_name, component_class):
+    print("SEARCHING:", component_name, component_class)
+
+    all_groups = get_group_names(component_class)
+
     # Get the component_desc from the API
     component_desc = get_component_desc(component_name)
-    out = classifier(component_desc, Component.get_all_groups())
+
+    print("DESCRIPTION:", component_desc)
+    if not component_desc or not all_groups:
+        return None
+
+    out = classifier(component_desc, all_groups)
     ind = np.argmax(out['scores'])
-    component_group = out['labels'][ind]
+    component_group = out['labels'][ind] 
 
-    return Component.get_reliability_value(component_group)
+    print("COMPONENT GROUP:", component_group)
+    res = ComponentReliability.get_reliability_value(component_group)
+    if res:
+        res["component_name"] = component_name
+        return res
+    
+    print("NOT FOUND")
+    return None
+
+def search_db_by_parts(full_name):
+    res = search_db(full_name)
+    if res:
+        res["component_name"] = full_name
+        return res
+
+    name_part = list(filter(lambda x: len(x) > 3 and x.isupper(), full_name.split()))
+    for component_name in name_part:
+        res = {}
+        if '-' in component_name:
+            res = search_db(component_name[:component_name.find('-')+3])
+        else:
+            res = search_db(component_name)
+
+        if res:
+            res["component_name"] = full_name
+            return res
+        
+    return None
 
 
-def get_components_from_file(filename):
+def get_reliability_from_file(filename):
     file_path = app.config['UPLOAD_FOLDER'] + "/" + filename
     my_dict = {}
     if filename.endswith(".xls"):
-        my_dict = ExcelParser(file_path).parse_pdf()
+        my_dict = ExcelParser(file_path).parse_excel()
     elif filename.endswith(".pdf"):
         my_dict = PDFParser(file_path).parse_pdf()
     
-    result = []
-    for component_name, cl in my_dict.items():
-        result.append(get_reliability_by_name(component_name))
+    print("FILE:", json.dumps(my_dict))
 
+    result = []
+    for full_name, component_class in my_dict.items():
+        res = search_db_by_parts(full_name)
+        if res:
+            result.append(res)
+            continue
+
+        res = get_reliability_by_name(full_name, component_class)
+        if res:
+            result.append(res)        
+
+    print(result)
     return result
 
 
+# Routes
 @app.route('/')
 def home():
     return send_from_directory('static', 'index.html')
 
 
-# Routes
 @app.route('/get_value', methods=['GET'])
 def get_value():
     component_name = request.args.get('component_name')
+    component_class = request.args.get('component_class')
     if not component_name:
         return api_response({"error": "Component name parameter missing"}, 400)
 
-    return api_response(get_reliability_by_name(component_name))
+    res = search_db(component_name)
+    if res:
+        return api_response(res)
+    
+    res = get_reliability_by_name(component_name, component_class)
+    if res:
+        return api_response(res)
+    
+    return api_response({"error" : "not found"}, 404)
 
 
 @app.route('/get_from_file', methods=['GET', 'POST'])
 def get_from_file():
-    # check if the post request has the file part
     if 'file' not in request.files:
         return api_response({"error": "No file"}, 400)
     file = request.files['file']
@@ -151,9 +263,10 @@ def get_from_file():
     if file.filename == '':
         return api_response({"error": "No file"}, 400)
     
-    filename = secure_filename(file.filename)
-    file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-    return api_response(get_components_from_file(filename))
+    file.save(os.path.join(app.config['UPLOAD_FOLDER'], file.filename))
+    return api_response(get_reliability_from_file(file.filename))
+
+
 
 # Error handlers
 @app.errorhandler(404)
