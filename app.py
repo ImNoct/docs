@@ -13,9 +13,6 @@ from document_parser.pdf_parser import PDFParser
 from cache.cache import Cache
 from search import google, efind
 
-# import random
-# import time
-
 # Configuration
 db = SQLAlchemy()
 app = Flask(__name__)
@@ -90,7 +87,6 @@ class DimComponent(db.Model):
 
     @staticmethod
     def get_group(component_name):
-        # row = DimComponent.query.filter_by(component_name=component_name).first()
         row = DimComponent.query.filter(DimComponent.component_name.contains(component_name)).first()
         if row:
             return row.group_id
